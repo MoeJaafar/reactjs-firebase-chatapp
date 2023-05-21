@@ -24,50 +24,99 @@ const firestore = firebase.firestore();
 
 
 function App() {
-
   const [user] = useAuthState(auth);
+  const [roomID, setRoomID] = useState('');
+  const [, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   return (
     <div className="App">
       <header>
         <span className='title'>MoeChat</span>
-        <SignOut />
+        <SignOut setIsLoggedIn={setIsLoggedIn} />
       </header>
 
       <section>
-        {user ? <ChatRoom /> : <SignIn />}
+        {user && roomID ? <ChatRoom roomID={roomID} /> : <SignIn setRoomID={setRoomID} setPassword={setPassword} setError={setError} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />}
+        {error && <p>{error}</p>}
       </section>
 
     </div>
   );
 }
 
-function SignIn() {
+function SignIn({ setRoomID, setPassword, setError, isLoggedIn, setIsLoggedIn }) {
+  const [localRoomID, setLocalRoomID] = useState("");
+  const [localPassword, setLocalPassword] = useState("");
+  const [showRoomForm, setShowRoomForm] = useState(false);
 
-  const signInWithGoogle = () => {
+  const signInWithGoogle = async () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
+    await auth.signInWithPopup(provider);
+    setIsLoggedIn(true);
+    setShowRoomForm(true);
+  }
+
+  const verifyRoom = async (event) => {
+    event.preventDefault();
+    
+    const roomRef = firestore.collection('rooms').doc(localRoomID);
+    const doc = await roomRef.get();
+    if (!doc.exists) {
+      setError('No such room!');
+      setTimeout(() => setError(''), 5000);
+    } else if (doc.data().password !== localPassword) {
+      setError('Wrong password!');
+      setTimeout(() => setError(''), 5000);
+    } else {
+      setRoomID(localRoomID);
+      setPassword(localPassword);
+    }
+  }
+
+  const handleRoomIDChange = (event) => {
+    setError('');
+    setLocalRoomID(event.target.value);
+  }
+
+  const handlePasswordChange = (event) => {
+    setError('');
+    setLocalPassword(event.target.value);
   }
 
   return (
     <>
-      <button className="sign-in" onClick={signInWithGoogle}>Sign in with Google</button>
+      {!isLoggedIn ? (
+        <button className="sign-in" onClick={signInWithGoogle}>Sign in with Google</button>
+      ) : showRoomForm ? (
+        <form onSubmit={verifyRoom}>
+          <input type="text" placeholder="Room ID" onChange={handleRoomIDChange} value={localRoomID} />
+          <input type="password" placeholder="Password" onChange={handlePasswordChange} value={localPassword} />
+          <button className="sign-in" type="submit">Enter Room</button>
+        </form>
+      ) : (
+        <p>Please enter a room ID to continue.</p>
+      )}
       <p className='center'>Please do not violate the community guidelines!</p>
     </>
   )
-
 }
 
-function SignOut() {
+
+
+
+
+function SignOut({ setIsLoggedIn }) {
   return auth.currentUser && (
-    <button className="button-85" onClick={() => auth.signOut()}>Sign Out</button>
+    <button className="button-85" onClick={() => { auth.signOut(); setIsLoggedIn(false);  }}>Sign Out</button>
   )
 }
 
 
-function ChatRoom() {
+function ChatRoom({ roomID }) {
   const dummy = useRef();
-  const messagesRef = firestore.collection('messages');
+    const messagesRef = firestore.collection('rooms').doc(roomID).collection('messages');
   const query = messagesRef.orderBy('createdAt').limit(25);
 
   const [messages] = useCollectionData(query, { idField: 'id' });
