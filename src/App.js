@@ -26,7 +26,7 @@ const firestore = firebase.firestore();
 function App() {
   const [user] = useAuthState(auth);
   const [roomID, setRoomID] = useState('');
-  const [password, setPassword] = useState('');
+  const [, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -38,8 +38,8 @@ function App() {
       </header>
 
       <section>
-        {user && roomID ? <ChatRoom roomID={roomID} /> : <SignIn setRoomID={setRoomID} setPassword={setPassword} setError={setError} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />}
-        {error && <p>{error}</p>}
+        {user && roomID ? <ChatRoom roomID={roomID} /> : <SignIn setRoomID={setRoomID} setPassword={setPassword} setError={setError} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} error={error} />
+        }
       </section>
 
     </div>
@@ -47,7 +47,7 @@ function App() {
 }
 
 
-function SignIn({ setRoomID, setPassword, setError, isLoggedIn, setIsLoggedIn }) {
+function SignIn({ setRoomID, setPassword, setError, isLoggedIn, setIsLoggedIn, error }) {
   const [localRoomID, setLocalRoomID] = useState("");
   const [localPassword, setLocalPassword] = useState("");
   const [showRoomForm, setShowRoomForm] = useState(false);
@@ -61,7 +61,14 @@ function SignIn({ setRoomID, setPassword, setError, isLoggedIn, setIsLoggedIn })
 
   const verifyRoom = async (event) => {
     event.preventDefault();
-    
+
+    setError('');
+
+    if (localRoomID.trim() === "") {
+      setError('Room ID cannot be empty!');
+      return;
+    }
+
     const roomRef = firestore.collection('rooms').doc(localRoomID);
     const doc = await roomRef.get();
     if (!doc.exists) {
@@ -75,6 +82,7 @@ function SignIn({ setRoomID, setPassword, setError, isLoggedIn, setIsLoggedIn })
       setPassword(localPassword);
     }
   }
+
 
   const handleRoomIDChange = (event) => {
     setError('');
@@ -91,14 +99,17 @@ function SignIn({ setRoomID, setPassword, setError, isLoggedIn, setIsLoggedIn })
       {!isLoggedIn ? (
         <button className="sign-in" onClick={signInWithGoogle}>Sign in with Google</button>
       ) : showRoomForm ? (
-        <form onSubmit={verifyRoom}>
-          <input type="text" placeholder="Room ID" onChange={handleRoomIDChange} value={localRoomID} />
-          <input type="password" placeholder="Password" onChange={handlePasswordChange} value={localPassword} />
+        <form onSubmit={verifyRoom} className="room-form">
+          <input type="text" className="room-input" placeholder="Room ID" onChange={handleRoomIDChange} value={localRoomID} />
+          <input type="password" className="room-input" placeholder="Password" onChange={handlePasswordChange} value={localPassword} />
           <button className="sign-in" type="submit">Enter Room</button>
         </form>
+
       ) : (
-        <p>Please enter a room ID to continue.</p>
+
+        <p className='pls'>Please enter a room ID to continue.</p>
       )}
+      {error && <div className='error'>{error}</div>}
       <p className='center'>Please do not violate the community guidelines!</p>
     </>
   )
@@ -125,7 +136,7 @@ function SignOut({ setIsLoggedIn, setRoomID, setPassword }) {
 
 function ChatRoom({ roomID }) {
   const dummy = useRef();
-    const messagesRef = firestore.collection('rooms').doc(roomID).collection('messages');
+  const messagesRef = firestore.collection('rooms').doc(roomID).collection('messages');
   const query = messagesRef.orderBy('createdAt').limit(25);
 
   const [messages] = useCollectionData(query, { idField: 'id' });
@@ -182,8 +193,8 @@ function ChatMessage(props) {
     if (date.toDateString() === now.toDateString()) {
       timestamp = `Today ${date.toLocaleTimeString('en-US')}`;
     } else if (date.getFullYear() === now.getFullYear() &&
-               date.getMonth() === now.getMonth() &&
-               date.getDate() === now.getDate() - 1) {
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate() - 1) {
       timestamp = `Yesterday ${date.toLocaleTimeString('en-US')}`;
     } else {
       timestamp = date.toLocaleString('en-US', {
