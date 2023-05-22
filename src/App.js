@@ -26,7 +26,7 @@ const firestore = firebase.firestore();
 function App() {
   const [user] = useAuthState(auth);
   const [roomID, setRoomID] = useState('');
-  const [, setPassword] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -34,7 +34,7 @@ function App() {
     <div className="App">
       <header>
         <span className='title'>MoeChat</span>
-        <SignOut setIsLoggedIn={setIsLoggedIn} />
+        <SignOut setIsLoggedIn={setIsLoggedIn} setRoomID={setRoomID} setPassword={setPassword} />
       </header>
 
       <section>
@@ -45,6 +45,7 @@ function App() {
     </div>
   );
 }
+
 
 function SignIn({ setRoomID, setPassword, setError, isLoggedIn, setIsLoggedIn }) {
   const [localRoomID, setLocalRoomID] = useState("");
@@ -107,11 +108,19 @@ function SignIn({ setRoomID, setPassword, setError, isLoggedIn, setIsLoggedIn })
 
 
 
-function SignOut({ setIsLoggedIn }) {
+function SignOut({ setIsLoggedIn, setRoomID, setPassword }) {
+  const signOut = () => {
+    auth.signOut();
+    setIsLoggedIn(false);
+    setRoomID('');
+    setPassword('');
+  };
+
   return auth.currentUser && (
-    <button className="button-85" onClick={() => { auth.signOut(); setIsLoggedIn(false);  }}>Sign Out</button>
+    <button className="button-85" onClick={signOut}>Sign Out</button>
   )
 }
+
 
 
 function ChatRoom({ roomID }) {
